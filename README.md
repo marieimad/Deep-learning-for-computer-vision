@@ -88,24 +88,6 @@ We introduced **rBLEU**, which removes high-frequency instructional filler words
 
 ---
 
-## Setup
-
-```bash
-pip install torch torchvision transformers evaluate sacrebleu mediapipe opencv-python pandas numpy
-```
-
-**Training:**
-```bash
-python train.py
-```
-
-**Preprocessing** (run once):
-```bash
-python preprocessing.py
-```
-
----
-
 ## Hardware
 
 All training runs used a single NVIDIA T4 GPU (16GB VRAM) via [Modal](https://modal.com/) cloud, ~4.25 hours per epoch on 31k clips.
@@ -114,4 +96,12 @@ All training runs used a single NVIDIA T4 GPU (16GB VRAM) via [Modal](https://mo
 
 ## Note on AI Assistance
 
+This project used Claude (Anthropic) as a coding assistant. The ideas, research, and architectural decisions were our own. Claude was used to help generate parts of the code — specifically the training loop, dataset class, and visualization scripts — based on our specifications. The model architecture, experimental design, and all analysis were driven by the authors. Note: many conversation transcripts were compressed or lost during development, so a complete log of all Claude interactions is not available.
+
 This project used Claude (Anthropic) as a coding assistant. The core ideas, research directions, and architectural decisions were entirely our own: we reviewed the relevant literature, designed the two-stream architecture, chose the components (DINOv2, MediaPipe, BART), and defined the experimental setup including all hyperparameters. AI assistance was used to help implement parts of the code and to assist with report writing. The model architecture, ablation design, novel rBLEU metric, and all result analysis were conceived and driven by the authors.
+
+---
+
+## Note on AI Assistance
+
+All writing is our own. Claude (Anthropic) was used to help generate parts of the code based on our specifications — specifically the training loop (`train.py`), dataset class (`dataset.py`), and visualization scripts. The model architecture, experimental design, hyperparameter choices, and all analysis were driven by the authors. Note: many conversation transcripts were compressed or lost during development, so a complete log of all Claude interactions is not available.
