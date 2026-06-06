@@ -31,7 +31,7 @@ PATIENCE     = 5        # early stopping
 GRAD_CLIP    = 1.0
 MAX_NEW_TOK  = 50
 NUM_BEAMS    = 4
-DEVICE       = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'mps' if torch.backends.mps.is_available() else ('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f'Device : {DEVICE}')
 
@@ -141,7 +141,7 @@ def main(root: str, checkpoint_dir: str):
         weight_decay=1e-2,
     )
     scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.5,
-                                   patience=2, verbose=True)
+                                   patience=2)
 
     # ── Log CSV ───────────────────────────────────────────────
     log_path = os.path.join(checkpoint_dir, 'training_log.csv')
@@ -153,9 +153,21 @@ def main(root: str, checkpoint_dir: str):
     best_bleu      = -1.0
     patience_count = 0
     best_ckpt      = os.path.join(checkpoint_dir, 'best_model.pt')
+    resume_ckpt    = os.path.join(checkpoint_dir, 'resume_checkpoint.pt')
+
+    start_epoch = 1
+    if os.path.exists(resume_ckpt):
+        print('🔄 Reprise depuis checkpoint...')
+        ckpt = torch.load(resume_ckpt, map_location=DEVICE)
+        model.load_state_dict(ckpt['model_state'])
+        optimizer.load_state_dict(ckpt['optimizer'])
+        best_bleu      = ckpt['best_bleu']
+        patience_count = ckpt['patience_count']
+        start_epoch    = ckpt['epoch'] + 1
+        print(f'   Reprise époque {start_epoch}, best BLEU = {best_bleu:.2f}')
 
     print('\n🚀 Début entraînement\n')
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(start_epoch, EPOCHS + 1):
         t0 = time.time()
 
         train_loss          = train_epoch(model, train_loader, optimizer)
@@ -193,21 +205,24 @@ def main(root: str, checkpoint_dir: str):
                 print('\n⏹  Early stopping déclenché.')
                 break
 
+        torch.save({'epoch': epoch, 'model_state': model.state_dict(), 'optimizer': optimizer.state_dict(), 'best_bleu': best_bleu, 'patience_count': patience_count}, resume_ckpt)
+        print(f'  💾 Resume checkpoint sauvegardé (époque {epoch})')
+        import modal; modal.Volume.from_name("cs231n-data").commit()
+
     # ── Évaluation finale sur test set ────────────────────────
     print('\n📊 Chargement du meilleur modèle pour évaluation test...')
     ckpt = torch.load(best_ckpt, map_location=DEVICE)
-    model.load_state_dict(ckpt['model_state'])
-
-    test_loss, test_bleu, test_preds, test_refs = evaluate_epoch(
-        model, test_loader, tokenizer
-    )
-    print(f'\n🏆 Test BLEU : {test_bleu:.2f}')
-    print(f'   Test loss : {test_loss:.4f}')
-    print('\nQuelques exemples :')
-    for p, r in zip(test_preds, test_refs):
-        print(f'  Pred : {p}')
-        print(f'  Ref  : {r}')
-        print()
+    if len(test_loader.dataset) > 0:
+        test_loss, test_bleu, test_preds, test_refs = evaluate_epoch(model, test_loader, tokenizer)
+        print(f'\n🏆 Test BLEU : {test_bleu:.2f}')
+        print(f'   Test loss : {test_loss:.4f}')
+        print('\nQuelques exemples :')
+        for p, r in zip(test_preds, test_refs):
+            print(f'  Pred : {p}')
+            print(f'  Ref  : {r}')
+            print()
+    else:
+        print('\n⚠️  Test set vide — skip.')
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

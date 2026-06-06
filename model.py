@@ -1,3 +1,4 @@
+from transformers.modeling_outputs import BaseModelOutput
 """
 model.py
 ────────
@@ -102,7 +103,7 @@ class SignLanguageTranslator(nn.Module):
     def forward(self, frames, keypoints, labels, attention_mask):
         enc = self.fusion(self.rgb_stream(frames), self.kp_stream(keypoints))
         return self.bart(
-            encoder_outputs=(enc,),
+            encoder_outputs=BaseModelOutput(last_hidden_state=enc),
             decoder_input_ids=self._shift_right(labels),
             labels=labels,
         )
@@ -111,7 +112,7 @@ class SignLanguageTranslator(nn.Module):
     def generate(self, frames, keypoints, max_new_tokens=50, num_beams=4):
         enc = self.fusion(self.rgb_stream(frames), self.kp_stream(keypoints))
         return self.bart.generate(
-            encoder_outputs=(enc,),
+            encoder_outputs=BaseModelOutput(last_hidden_state=enc),
             max_new_tokens=max_new_tokens,
             num_beams=num_beams,
             early_stopping=True,

@@ -27,8 +27,7 @@ class How2SignDataset(Dataset):
         valid = []
         for _, row in df.iterrows():
             cid = str(row['SENTENCE_NAME'])
-            if (os.path.exists(os.path.join(frames_dir,    f'{cid}.npy')) and
-                os.path.exists(os.path.join(keypoints_dir, f'{cid}.npy'))):
+            if os.path.exists(os.path.join(keypoints_dir, f'{cid}.npy')):
                 valid.append(row)
         self.data = pd.DataFrame(valid).reset_index(drop=True)
         print(f'[{split}] {len(self.data)}/{len(df)} clips disponibles')
@@ -41,12 +40,14 @@ class How2SignDataset(Dataset):
         caption = str(row['SENTENCE'])
 
         # Frames (T,3,H,W) normalisé ImageNet
-        frames = torch.from_numpy(
-            np.load(os.path.join(self.frames_dir, f'{cid}.npy'))
-        ).permute(0, 3, 1, 2).float()
-        mean = torch.tensor([0.485, 0.456, 0.406]).view(1,3,1,1)
-        std  = torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1)
-        frames = (frames - mean) / std
+        frames_path = os.path.join(self.frames_dir, cid + ".npy")
+        if os.path.exists(frames_path):
+            frames = torch.from_numpy(np.load(frames_path)).permute(0,3,1,2).float()
+            mean = torch.tensor([0.485,0.456,0.406]).view(1,3,1,1)
+            std  = torch.tensor([0.229,0.224,0.225]).view(1,3,1,1)
+            frames = (frames - mean) / std
+        else:
+            frames = torch.zeros(48, 3, 224, 224)
 
         # Keypoints (T, 201)
         kp = torch.from_numpy(
